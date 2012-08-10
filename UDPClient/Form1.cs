@@ -15,6 +15,9 @@ namespace UDPClient
     {
         private UdpClient connection;
 
+      //global vars
+      string oldMessage;
+
         public Form1()
         {
             InitializeComponent();
@@ -32,8 +35,7 @@ namespace UDPClient
                 var port = int.Parse(textBoxPort.Text);
                 connection.Connect(ip, port);
 
-                textBoxMessageToSend.Enabled = true;
-                buttonSendMessage.Enabled = true;
+              panel_Sending.Enabled = true;
 
                 var s = new UdpState { Endpoint = new IPEndPoint(ip, port), Client = connection };
                 connection.BeginReceive(MessageReceived, s);   
@@ -41,8 +43,7 @@ namespace UDPClient
             else
             {
                 buttonConnect.Text = "Connect";
-                textBoxMessageToSend.Enabled = false;
-                buttonSendMessage.Enabled = false;
+              panel_Sending.Enabled = false;
 
                 connection.Close();
             }
@@ -56,8 +57,10 @@ namespace UDPClient
 
         private void MessageReceived(IAsyncResult ar)
         {
-            var client = ((UdpState)(ar.AsyncState)).Client;
-            var endpoint = ((UdpState)(ar.AsyncState)).Endpoint;
+          if (buttonConnect.Text == "Disconnect")
+          {
+            var client = ((UdpState) (ar.AsyncState)).Client;
+            var endpoint = ((UdpState) (ar.AsyncState)).Endpoint;
 
             var receiveBytes = client.EndReceive(ar, ref endpoint);
             var receiveString = Encoding.ASCII.GetString(receiveBytes) + "\r\n";
@@ -66,8 +69,9 @@ namespace UDPClient
 
             var ip = IPAddress.Parse(textBoxIpAddress.Text);
             var port = int.Parse(textBoxPort.Text);
-            var s = new UdpState { Endpoint = new IPEndPoint(ip, port), Client = connection };
+            var s = new UdpState {Endpoint = new IPEndPoint(ip, port), Client = connection};
             connection.BeginReceive(MessageReceived, s);
+          }
         }
 
         delegate void SetTextCallback(Control ctrl, string text);
@@ -87,9 +91,35 @@ namespace UDPClient
         private void buttonSendMessage_Click(object sender, EventArgs e)
         {
             var message = textBoxMessageToSend.Text;
+          oldMessage = message;
+
             textBoxMessageToSend.Text = "";
 
             connection.Send(Encoding.Default.GetBytes(message), message.Count());
+        }
+
+        private void textBoxMessageToSend_KeyDown(object sender, KeyEventArgs e)
+        {
+          if (e.KeyCode == Keys.Enter)
+          
+            buttonSendMessage_Click(sender, e);
+          
+          if(e.KeyCode == Keys.Up)
+            textBoxMessageToSend.Text = oldMessage;
+        }
+
+
+        private void button_LedOn_Click(object sender, EventArgs e)
+        {
+          var message = "!Led:ON";
+          connection.Send(Encoding.Default.GetBytes(message), message.Count());
+
+        }
+
+        private void button_LedOff_Click(object sender, EventArgs e)
+        {
+          var message = "!Led:OFF";
+          connection.Send(Encoding.Default.GetBytes(message), message.Count());
         }
     }
 }
